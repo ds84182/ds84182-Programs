@@ -115,16 +115,10 @@ function format(td)
 	td.write("TDFS Volume\0\0\0\0\0")
 	print("Writing file entries")
 	
-	local data = ""
-	for i=1, fent do
-		local x,y = term.getCursor()
-		term.setCursor(1, y)
-		term.write("Wrote "..i.."/"..fent.." ("..math.ceil(i/fent*100).."%) entries")
-		data = data.."E".."\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".."\0\0\0\255\255\255\255"
-	end
+	local data = ("E".."\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0".."\0\0\0\255\255\255\255"):rep(fent)
 	td.write(data)
 	
-	print("\nWriting allocation map")
+	print("Writing allocation map")
 	td.write(("\0"):rep(math.ceil(blocks/8)))
 	
 	print("Formatting data blocks")
@@ -135,6 +129,9 @@ function format(td)
 		term.write("Wrote "..i.."/"..blocks.." ("..math.ceil(i/blocks*100).."%) blocks")
 		td.write(dblk)
 	end
+	local x,y = term.getCursor()
+	term.setCursor(1, y)
+	term.write("Wrote "..blocks.."/"..blocks.." ("..math.ceil(blocks/blocks*100).."%) blocks")
 	print()
 end
 
@@ -394,7 +391,6 @@ function loadTDFS(td,verbose)
 	
 	function fs.readFromFile(file)
 		--this function doesn't make any handles and crap
-		local pt = split_path(file)
 		--traverse the path
 		local pt = split_path(file)
 		local child = table.remove(pt,#pt)
@@ -428,10 +424,9 @@ function loadTDFS(td,verbose)
 	end
 	
 	function fs.remove(file)
-		error("TODO: FIX")
 		local pt = split_path(file)
 		local child = table.remove(pt,#pt)
-		local parent = traversePath(files,pt)
+		local parent = assert(traversePath(files,pt),file..": Directory not found")
 		local fe = getEntry(parent,child)
 		
 		if not fe then
@@ -439,24 +434,15 @@ function loadTDFS(td,verbose)
 		else
 			fe = fents[fe]
 		end
-		if #parent[2] == 1 and parent[3] then
-			parent[2][1] = nil
-			parent[3].dptr = 0
-		elseif parent[2][1] == fe and #parent[2] > 1 and parent[3] then
-			--special case deletion
-			parent[3].dptr = parent[2][2].index
-			table.remove(parent[2],1)
-		else
-			-- find it in parent[2]
-			for i, v in ipairs(parent[2]) do
-				if v == fe then
-					if i ~= 1 then
-						parent[2][i-1].next = parent[2][i+1] and parent[2][i+1].index or 0xFFFF
-					end
-					table.remove(parent[2],i)
-					break
-				end
-			end
+		
+		if fe.prev ~= 0xFFFF then
+			writeFileEntry(fe.prev)
+			fents[fe.prev].next = fe.next
+		end
+		
+		if fe.next ~= 0xFFFF then
+			writeFileEntry(fe.next)
+			fents[fe.next].prev = fe.prev
 		end
 		
 		local blocks = {} -- get the blocks used by this file entry
@@ -663,8 +649,8 @@ if _test then
 	fs.writeToFile("file","HI")
 	print(fs.readFromFile("dir/file.txt"))
 	td.saveToFile()
-	fs.delete("dir/file.txt")
-	fs.delete("dir")
+	fs.remove("dir/file.txt")
+	fs.remove("dir")
 	td.saveToFile()
 else
 	local function printHelp()
