@@ -664,6 +664,9 @@ else
 		print("format - Formats the selected tape drive")
 		print("put [from] [to] - Copies a file from the computer and puts it on the tape")
 		print("get [from] [to] - Copies a file from the tape and saves it to the computer")
+		print("list [dir] - Lists the files in a directory on the tape drive")
+		print("remove [file] - Removes a file from the tape drive")
+		print("mount [point] - Mounts the tape drive to the specified mount point")
 	end
 
 	local args = {...}
