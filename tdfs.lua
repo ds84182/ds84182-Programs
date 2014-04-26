@@ -375,13 +375,15 @@ function loadTDFS(td,verbose)
 		
 		--data writing
 		while #data > 0 do
-			local nd = data:sub(1, 1018)
-			data = data:sub(1019)
+			local nd = data:sub(1, 1019)
+			data = data:sub(1020)
+			alloc[blocks[1]+1] = true
 			if blocks[2] == nil and #data > 0 then
+				_G.print("alloc")
 				blocks[2] = getFirstUnallocBlock()
 			end
 			local bid = table.remove(blocks,1)
-			print("Writing "..#nd.." bytes to block "..bid)
+			_G.print("Writing "..#nd.." bytes to block "..bid)
 			linkAndWriteDataToBlock(bid,blocks[1] or 0xFFFF,nd)
 		end
 		writeAllocData()
@@ -448,18 +450,24 @@ function loadTDFS(td,verbose)
 			writeFileEntry(fe.next)
 		end
 		
-		local blocks = {} -- get the blocks used by this file entry
-		local current = fe[3] and fe[3].dptr or fe.dptr
-		while true do
-			td.seek(-td.getSize())
-			td.seek(fdatptr+(current*1024)) --seek directly to block
-			assert(td.read(1) == "B","Invalid block "..fdatptr..", "..current)
-			local nxt = fu2(td.read(2))
-			if nxt == 0xFFFF then blocks[#blocks+1] = nxt break end
-		end
-		
-		for i, v in ipairs(blocks) do
-			deallocBlock(v)
+		if fe[1] == "file" then
+			local blocks = {} -- get the blocks used by this file entry
+			local current = fe.dptr
+			while true do
+				td.seek(-td.getSize())
+				td.seek(fdatptr+(current*1024)) --seek directly to block
+				assert(td.read(1) == "B","Invalid block "..fdatptr..", "..current)
+				local nxt = fu2(td.read(2))
+				if nxt == 0xFFFF then blocks[#blocks+1] = nxt break end
+			end
+			
+			for i, v in ipairs(blocks) do
+				deallocBlock(v)
+			end
+		elseif fe[1] == "dir" then
+			if fe.dptr ~= 0xFFFF then
+				error("cannot delete directory: directory not empty")
+			end
 		end
 		
 		fe[1] = "empty"
@@ -668,7 +676,11 @@ if _test then
 	fs.writeToFile("dir/file.txt","I am random file data.")
 	fs.writeToFile("file.txt","I am random file data.")
 	fs.writeToFile("file","HI")
+	local bf = ("\1"):rep(1024*8)
+	fs.writeToFile("bigfile",bf)
+	print(fs.spaceUsed())
 	print(fs.readFromFile("dir/file.txt"))
+	print(#fs.readFromFile("bigfile"),#bf)
 	td.saveToFile()
 	fs.remove("dir/file.txt")
 	fs.remove("dir")
