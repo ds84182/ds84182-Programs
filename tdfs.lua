@@ -22,7 +22,7 @@
 
 --after that, you have file data
 -- Byte 0: "B" B is for block!
--- Byte 1-2: Short describing next block, if it equals the current block then we are at the last block
+-- Byte 1-2: Short describing next block, if it equals 0xFFFF then we are at the last block
 -- Byte 3-4: Short describing length of block data
 -- Byte 5-1023: Data, only bytelen is used
 
@@ -437,6 +437,10 @@ function loadTDFS(td,verbose)
 		if fe.prev ~= 0xFFFF then
 			fents[fe.prev].next = fe.next
 			writeFileEntry(fe.prev)
+		else
+			--we were the first file
+			parent.dptr = 0xFFFF
+			writeFileEntry(parent.index)
 		end
 		
 		if fe.next ~= 0xFFFF then
