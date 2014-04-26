@@ -610,6 +610,22 @@ function loadTDFS(td,verbose)
 	
 	function fs.isReadOnly() return false end
 	
+	function fs.getLabel() return td.getLabel() end
+	function fs.setLabel(l) td.setLabel(l) end
+	
+	function fs.spaceUsed()
+		--count the number of allocd blocks
+		local used = 0
+		for i=1, #alloc do
+			used = used+((alloc[i] and 1 or 0)*1019)
+		end
+		return used
+	end
+	
+	function fs.spaceTotal()
+		return #alloc*1019
+	end
+	
 	return fs
 end
 
