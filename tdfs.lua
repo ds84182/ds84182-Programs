@@ -138,7 +138,6 @@ end
 function isValidTDFS(td)
 	td.seek(-td.getSize())
 	local sig = td.read(4)
-	print(sig)
 	return sig == "TDFS"
 end
 
@@ -665,7 +664,7 @@ else
 	if not args[1] then printHelp() return end
 	local td = component.tape_drive
 	if component.get(args[1]) then
-		td = component[component.get(args[1])]
+		td = component.proxy(component.get(args[1]))
 		table.remove(args,1)
 	end
 	if args[1] == "format" then
@@ -696,6 +695,7 @@ else
 		print("Loading TDFS from tape...")
 		local fs = loadTDFS(td,args[#args] == "verbose")
 		rfs.mount(fs,args[2])
+		print("Mounted "..td.address.." at "..args[2])
 	else
 		printHelp()
 		return
