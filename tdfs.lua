@@ -435,13 +435,13 @@ function loadTDFS(td,verbose)
 		end
 		
 		if fe.prev ~= 0xFFFF then
-			writeFileEntry(fe.prev)
 			fents[fe.prev].next = fe.next
+			writeFileEntry(fe.prev)
 		end
 		
 		if fe.next ~= 0xFFFF then
-			writeFileEntry(fe.next)
 			fents[fe.next].prev = fe.prev
+			writeFileEntry(fe.next)
 		end
 		
 		local blocks = {} -- get the blocks used by this file entry
@@ -458,13 +458,15 @@ function loadTDFS(td,verbose)
 			deallocBlock(v)
 		end
 		
-		local fe = fe[3] and fe[3] or fe
+		fe[1] = "empty"
 		fe.name = ""
-		fe.dptr = 0
-		fe.next = 0
+		fe.dptr = 0xFFFF
+		fe.next = 0xFFFF
+		fe.prev = 0xFFFF
 		fe.type = 0
 		writeAllocData()
 		writeFileEntry(fe.index)
+		return true
 	end
 	
 	function fs.makeDirectory(path)
